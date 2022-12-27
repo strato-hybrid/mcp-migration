@@ -37,6 +37,7 @@ public class MigrationService {
     private static final String PERSISTENT_VOLUME_CLAIM_URL = "/api/v1/namespaces/{namespace}/persistentvolumeclaims";
     private static final String PERSISTENT_VOLUME_URL = "/api/v1/persistentvolumes";
     private static final String BACKUP_LIST_URL = "/apis/velero.io/v1/backups";
+    private static final String BACKUP_CREATE_URL = "/apis/velero.io/v1/namespaces/velero/backups";
 
 
 
@@ -144,5 +145,60 @@ public class MigrationService {
 
     }
 
+    public ResponseEntity<MigrationCreateResource> createBackupNamespace(Migration migration){
+        String apiUrl = BACKUP_CREATE_URL;
 
+        migration.Api(apiUrl);
+
+        MigrationCreateResource createResource = new MigrationCreateResource();
+        MigrationCreateResource.Metadata metadata = new MigrationCreateResource.Metadata();
+        createResource.setKind("Backup");
+        metadata.setName(migration.getBackupNm());
+
+        Spec spec = new Spec();
+        List<String> includeNamespace = new ArrayList<String>();
+        //includeNamespace.add("*");
+        includeNamespace.add(migration.getNamespace());
+        spec.setIncludedNamespaces(includeNamespace);
+
+        createResource.setSpec(spec);
+        createResource.setMetadata(metadata);
+
+
+        ObjectMapper mapper = new ObjectMapper();
+        MigrationCreateResource requestBody = mapper.convertValue(createResource, MigrationCreateResource.class);
+
+        ResponseEntity<MigrationCreateResource> response = postNamespace(HttpMethod.POST, migration,requestBody);
+        logger.info("{}: {}","result",response.getBody());
+        logger.info("{}: {}", "backupNamespace", "OK");
+        return response;
+    }
+
+    public ResponseEntity<MigrationCreateResource> postNamespace(HttpMethod httpMethod, Migration migration,MigrationCreateResource requestBody){
+        String uri = migration.getEndpoint()+migration.getApi();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(migration.getApiToken());
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<MigrationCreateResource> httpEntity = new HttpEntity<>(requestBody, headers);
+
+        //   HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(requestBody, headers);
+        RestTemplate restTemplate = null;
+        try {
+            restTemplate = RestTemplateGenerator.getRestTemplate();
+
+        } catch (NoSuchAlgorithmException e) {
+            logger.info("NoSuchAlgorithmException "+e.toString());
+            e.printStackTrace();
+        } catch (KeyStoreException e) {
+            logger.info("KeyStoreException "+e.toString());
+            e.printStackTrace();
+        } catch (KeyManagementException e) {
+            logger.info("KeyManagementException "+e.toString());
+            e.printStackTrace();
+        }
+
+        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, MigrationCreateResource.class);
+    }
 }
