@@ -2,10 +2,13 @@ package kr.co.strato.migration.controller;
 
 import io.fabric8.kubernetes.api.model.PersistentVolumeList;
 import io.kubernetes.client.openapi.models.V1PodList;
+import io.swagger.annotations.ApiOperation;
 import kr.co.strato.migration.model.Migration;
+import kr.co.strato.migration.model.MigrationCreateResource;
 import kr.co.strato.migration.model.MigrationResource;
 import kr.co.strato.migration.service.MigrationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -57,6 +60,20 @@ public class MigrationController {
         return results;
     }
 
+    @ApiOperation(value="백업 생성")
+    @RequestMapping(value = "/backup/create", method = RequestMethod.POST)
+    @ResponseBody
+    public MigrationCreateResource createBackupNamespace(@RequestParam String endpoint, @RequestParam String apiToken, @RequestParam String backupNm, @RequestParam String namespace) {
+        Migration migration = Migration.builder()
+                .backupNm(backupNm)
+                .namespace(namespace)
+                .apiToken(apiToken)
+                .endpoint(endpoint)
+                .build();
+        ResponseEntity<MigrationCreateResource> response = migrationService.createBackupNamespace(migration);
+        ///System.out.println("result : "+result.toString());
+        return response.getBody();
+    }
 
 
 }
